@@ -1,0 +1,7 @@
+# Execute with the FreeCAD Macro menu to run the same native tests as FreeCADCmd.
+# Results: build/freecad-test/result.json and unittest.log
+import os
+import runpy
+from pathlib import Path
+root = Path(os.environ.get('SUN_GEAR_ROOT', str(Path(__file__).resolve().parents[2])))
+runpy.run_path(str(root / 'tests' / 'freecad' / 'run_suite.py'), run_name='__main__')
