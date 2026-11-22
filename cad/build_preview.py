@@ -1,44 +1,60 @@
-"""Independent CadQuery STEP/STL build for nominal FreeCAD-macro parameters.
-Not a substitute for executing the FreeCAD Part Design feature tree.
+"""Independent OpenCascade preview for square and star prototypes.
+
+THIS IS NOT THE NATIVE FREECAD TEST. It verifies portable BREP/STEP geometry only.
+Run: PYTHONPATH=. python cad/build_preview.py
 """
 import math
 from pathlib import Path
 import cadquery as cq
 from OCP.BRepCheck import BRepCheck_Analyzer
+from cad.adapter_geometry import DEFAULT, outline_points, polygon_area
 
 OUT = Path(__file__).resolve().parent
-box_depth, pin_exposed, engagement = 101.6, 12.7, 10.0
-barrel_diameter, barrel_length = 15.0, 20.0
-pilot_diameter, pilot_length = 8.0, 10.0
-star_mouth_af, star_depth, taper_degrees = 7.05, 11.5, 4.0
-z0 = pin_exposed-engagement
-star_roof_af = star_mouth_af - 2*star_depth*math.tan(math.radians(taper_degrees))
 
-def wire(across_flats, z):
-    half = across_flats/2
-    outer_r = math.sqrt(2)*half
-    inner_r = math.sqrt(1 + (math.sqrt(2)-1)**2)*half
-    vertices = []
-    for i in range(16):
-        r = outer_r if i%2==0 else inner_r
-        a = math.radians(i*22.5)
-        vertices.append(cq.Vector(r*math.cos(a), r*math.sin(a), z))
-    return cq.Wire.makePolygon(vertices + vertices[:1], close=True)
 
-barrel = cq.Solid.makeCylinder(barrel_diameter/2, barrel_length, cq.Vector(0,0,z0))
-pilot = cq.Solid.makeCylinder(pilot_diameter/2, pilot_length, cq.Vector(0,0,z0+barrel_length))
-stock = barrel.fuse(pilot)
-# Mouth protrudes fractionally beyond end to guarantee a clean open recess.
-star = cq.Solid.makeLoft([wire(star_mouth_af+0.01, z0-0.01), wire(star_roof_af, z0+star_depth)], ruled=True)
-result = stock.cut(star)
-assert result.isValid() and BRepCheck_Analyzer(result.wrapped).IsValid()
-assert len(result.Solids()) == 1
-expected = z0 + barrel_length + pilot_length
-assert expected <= box_depth
-bb = result.BoundingBox()
-assert abs(bb.zmin-z0) < 1e-5 and abs(bb.zmax-expected)<1e-5
-assert result.Volume() > 0
-cq.exporters.export(result, str(OUT/'sun_gear_adapter_v0.step'), exportType='STEP')
-cq.exporters.export(result, str(OUT/'sun_gear_adapter_v0.stl'), exportType='STL', tolerance=0.08, angularTolerance=0.08)
-print(f'valid={result.isValid()}, solids={len(result.Solids())}, volume_mm3={result.Volume():.3f}, ') 
-print(f'mouth_af={star_mouth_af}, roof_af={star_roof_af:.3f}, seated_bottom_z={z0:.3f}, top_z={expected:.3f}, remaining_height={box_depth-expected:.3f}')
+def wire(style, across_flats, z):
+    pts = [cq.Vector(x,y,z) for x,y in outline_points(style, across_flats)]
+    return cq.Wire.makePolygon(pts + pts[:1], close=True)
+
+
+def build(style):
+    spec = DEFAULT
+    z0 = spec.seated_bottom
+    barrel = cq.Solid.makeCylinder(spec.barrel_diameter/2, spec.barrel_length, cq.Vector(0,0,z0))
+    pilot = cq.Solid.makeCylinder(spec.pilot_diameter/2, spec.pilot_length,
+                                  cq.Vector(0,0,z0+spec.barrel_length))
+    stock = barrel.fuse(pilot)
+    lead = 0.02
+    mouth = spec.mouth_across_flats + 2*lead*math.tan(math.radians(spec.wall_draft_degrees))
+    cutter = cq.Solid.makeLoft([
+        wire(style,mouth,z0-lead),
+        wire(style,spec.roof_across_flats,z0+spec.cavity_depth)],ruled=True)
+    solid = stock.cut(cutter)
+    assert solid.isValid() and BRepCheck_Analyzer(solid.wrapped).IsValid()
+    assert len(solid.Solids()) == 1 and solid.Volume()>0
+    bbox = solid.BoundingBox()
+    assert abs(bbox.zmin-spec.seated_bottom) < 1e-5
+    assert abs(bbox.zmax-spec.seated_top) < 1e-5
+    assert spec.seated_top <= spec.box_depth
+    # Verify central cavity is open and closes after roof (material above roof).
+    void_probe = cq.Solid.makeCylinder(0.8, spec.cavity_depth-0.4, cq.Vector(0,0,z0+0.2))
+    roof_probe = cq.Solid.makeCylinder(0.8,1.0,cq.Vector(0,0,z0+spec.cavity_depth+0.4))
+    assert solid.intersect(void_probe).Volume() < 1e-5
+    assert solid.intersect(roof_probe).Volume() > 1
+    path = OUT / ('sun_gear_adapter_' + style + '_v1.step')
+    cq.exporters.export(solid,str(path),exportType='STEP')
+    # Re-read the actual artifact; don't trust only the pre-export shape.
+    imported = cq.importers.importStep(str(path))
+    assert imported.val().isValid()
+    assert len(imported.solids().vals()) == 1
+    assert abs(imported.val().Volume()-solid.Volume()) < 1e-2
+    print('%s valid STEP: %d bytes, volume %.3f mm3, height %.3f mm'
+        % (style,path.stat().st_size,solid.Volume(),bbox.zmax))
+    return solid
+
+
+if __name__ == '__main__':
+    square = build('square')
+    star = build('star')
+    assert square.Volume()>star.Volume(), 'Square must have smaller cutout than star'
+    print('Independent STEP previews: PASS. Native FreeCAD: NOT TESTED.')
