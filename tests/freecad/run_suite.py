@@ -28,7 +28,26 @@ report = {
     'failures': [{'test':str(t),'trace':msg} for t,msg in result.failures],
     'errors': [{'test':str(t),'trace':msg} for t,msg in result.errors],
     'skipped': [{'test':str(t),'reason':reason} for t,reason in result.skipped],
+    'generated_models': {},
 }
+if status == 'PASS':
+    # Rebuild after the tests in a clean document, then retain the genuine
+    # editable .FCStd and FreeCAD-generated STEP files as CI artifacts.
+    try:
+        from cad.freecad_adapter import export_adapter
+        for style in ('square', 'star'):
+            native, step = export_adapter(style, outdir/'models')
+            for artifact in (native, step):
+                if Path(artifact).stat().st_size < 1000:
+                    raise RuntimeError('FreeCAD export is missing or empty: ' + artifact)
+            report['generated_models'][style] = {
+                'fcstd': str(Path(native).relative_to(outdir)),
+                'step': str(Path(step).relative_to(outdir))}
+    except Exception:
+        import traceback
+        report['errors'].append({'test':'native_model_export', 'trace':traceback.format_exc()})
+        status = 'FAIL'
+        report['status'] = status
 (outdir/'result.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
 print('NATIVE FREECAD TESTS:', status, result.testsRun)
 if status != 'PASS':
