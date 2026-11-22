@@ -24,8 +24,8 @@ def build(style):
     pilot = cq.Solid.makeCylinder(spec.pilot_diameter/2, spec.pilot_length,
                                   cq.Vector(0,0,z0+spec.barrel_length))
     stock = barrel.fuse(pilot)
-    lead = 0.02
-    mouth = spec.mouth_across_flats + 2*lead*math.tan(math.radians(spec.wall_draft_degrees))
+    lead = 0.0
+    mouth = spec.mouth_across_flats
     cutter = cq.Solid.makeLoft([
         wire(style,mouth,z0-lead),
         wire(style,spec.roof_across_flats,z0+spec.cavity_depth)],ruled=True)
