@@ -44,10 +44,10 @@ exports **actual FreeCAD `.FCStd` and STEP files** for both variants to
 [`docs/testing.md`](docs/testing.md) and the
 [CI workflow](.github/workflows/freecad-native.yml).
 
-**Status:** independent geometry/STEP checks passed; native FreeCAD integration
-was not run in the original build environment, because FreeCAD was not installed.
-The CI workflow should determine whether the native tests pass. Actual pin fit
-and torque transmission are outstanding.
+**Status:** The original adapter v1 passed its 8 native FreeCAD tests on
+FreeCAD 0.19 in CI (run 45054873747). The drive v2 suite passed **13/13**
+native tests in [run 45065941001](https://github.com/isomorphisms/sun-gear-piano-tuner/actions/runs/45065941001), including six pitch-layout exports. Actual pin fit,
+torque transmission, manufactured involute teeth and backlash remain unverified.
 
 The existing [v0 star macro](cad/sun_gear_adapter_v0.FCMacro) and
 [v0 STEP](cad/sun_gear_adapter_v0.step) are retained as historical references.
@@ -76,4 +76,4 @@ coupling or quantified backlash. Lateral piano clearance is still unknown.
 
 The adapter-only native suite was verified on FreeCAD 0.19 in
 [GitHub Actions run 45054873747](https://github.com/isomorphisms/sun-gear-piano-tuner/actions/runs/45054873747);
-**drive-v2 native CI status must be checked separately** before claiming it passes.
+**Drive v2 CI:** 13/13 tests PASS in [run 45065941001](https://github.com/isomorphisms/sun-gear-piano-tuner/actions/runs/45065941001). This proves reference geometry and serialization, not a working gearbox.
