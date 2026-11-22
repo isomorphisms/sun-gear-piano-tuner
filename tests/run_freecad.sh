@@ -32,7 +32,7 @@ if not path.exists():
 report = json.loads(path.read_text())
 print('FreeCAD', report.get('freecad_version'), report.get('status'), 'tests', report.get('tests_run'))
 if (report.get('runtime') != 'REAL_FREECAD' or report.get('status') != 'PASS'
-        or report.get('tests_run',0) < 8 or report.get('failures')
+        or report.get('tests_run',0) < 13 or report.get('failures')
         or report.get('errors') or report.get('skipped')):
     sys.exit('FAIL: native FreeCAD tests incomplete or failed')
 PY
@@ -40,4 +40,13 @@ if [[ "$status" -ne 0 ]]; then exit "$status"; fi
 for style in square star; do
   [[ -s "$SUN_GEAR_TEST_DIR/models/sun_gear_adapter_${style}_v1.FCStd" ]] || { echo "FAIL: missing native $style FCStd" >&2; exit 1; }
   [[ -s "$SUN_GEAR_TEST_DIR/models/sun_gear_adapter_${style}_v1.step" ]] || { echo "FAIL: missing native $style STEP" >&2; exit 1; }
+done
+
+for study in planetary4 planetary5 compound6; do
+  for style in square star; do
+    for ext in FCStd step; do
+      path="$SUN_GEAR_TEST_DIR/drives/sun_gear_${study}_${style}_layout_v2.${ext}"
+      [[ -s "$path" ]] || { echo "FAIL: missing native drive pitch model: $path" >&2; exit 1; }
+    done
+  done
 done
