@@ -52,3 +52,19 @@ Decision criteria: output torque, controlled incremental rotation, deadband afte
 - Howard Piano Industries, standard #2 star tip: https://www.howardpianoindustries.com/piano-tuning-lever-tip/
 - Piano Technicians Guild discussion of star-tip sizing vs tuning-pin shank: https://music.stackexchange.com/questions/49614/how-can-i-determine-the-diameter-of-my-pianos-tuning-pins
 - Generic commercial socket tip: Schaff No. 14B, #2 star (1 inch overall); an alternative is to purchase such a tip and build a removable gear coupling around it rather than manufacture its mating socket from scratch.
+
+## Revision v1: square versus eight-point star — November 22, 2026
+
+The earlier v0 study was star-only. The project now supports **two sockets**
+with identical barrel and upper pilot: (a) a four-flat square tapered cavity;
+(b) an eight-point star tapered cavity. Neither has been selected as the winner.
+A square opening potentially reduces the unused angular engagement positions;
+that fact alone does not prove lower backlash or better control. Compare real
+part clearances, pin head geometry, and reversal hysteresis before choosing.
+
+The two sketches use the same nominal 7.05-mm mouth width and 4-deg wall draft
+purely to hold other variables constant. These are *prototype settings*, not
+manufacturing dimensions. Both can be changed centrally in
+`cad/adapter_geometry.py` and regenerated. The native FreeCAD test runner is
+`tests/run_freecad.sh`; testing procedure and unresolved gates are in
+`docs/testing.md`.
