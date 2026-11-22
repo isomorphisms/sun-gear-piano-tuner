@@ -63,11 +63,11 @@ def build_adapter(style, spec=DEFAULT, document_name=None):
         pilot.Length = spec.pilot_length
         doc.recompute()
 
-        # An extra 0.02-mm lead into the opening prevents an ambiguous
-        # coplanar contact between subtraction solid and barrel end face.
-        lead = 0.02
-        mouth_af = spec.mouth_across_flats + 2*lead*math.tan(
-            math.radians(spec.wall_draft_degrees))
+        # The loft starts exactly on the stock's bottom plane. FreeCAD 0.19
+        # includes a 0.02-mm lead-in beyond this plane in the body's BBox,
+        # so the former overrun failed the axial positioning acceptance test.
+        lead = 0.0
+        mouth_af = spec.mouth_across_flats
         mouth = _profile(body, 'SocketMouth', style + ' socket mouth',
                          outline_points(style, mouth_af), spec.seated_bottom - lead)
         roof = _profile(body, 'SocketRoof', style + ' blind socket roof',
