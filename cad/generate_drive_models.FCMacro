@@ -1,0 +1,13 @@
+# FreeCAD GUI macro: export six native, editable reference layouts.
+# Gears are pitch envelopes ONLY, not manufactured involute teeth.
+import sys
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(root))
+from cad.drive_geometry import STUDIES
+from cad.freecad_drive import export_drive
+out=root/'build'/'freecad-drive'
+for study in STUDIES:
+    for socket in ('square','star'):
+        native, step=export_drive(study,socket,out)
+        print('Exported pitch reference only:',native,step)
