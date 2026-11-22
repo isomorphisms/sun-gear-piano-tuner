@@ -56,3 +56,24 @@ unselected alternatives.
 
 See [`docs/adapter_design_notes.md`](docs/adapter_design_notes.md) for earlier
 measurements, tuning-pin notes and gear concepts.
+
+## Drive v2 — three reduction pitch studies (no mechanism selected)
+
+[Drive calculations and evidence limits](docs/drive_tradeoffs.md) compare
+4:1 planetary, 5:1 planetary and a 6:1 folded two-stage spur train. All
+three have FreeCAD-native **pitch-envelope** reference assemblies using either
+square or eight-point star adapter, for **six** editable `.FCStd` documents.
+
+```sh
+bash tests/run_freecad.sh
+```
+
+The native suite also tests the six drive references and exports their `.FCStd`
+and reference-only `.step` files under `build/freecad-test/drives/` after passing.
+Run `cad/generate_drive_models.FCMacro` in FreeCAD to export them manually.
+These layouts do **not** contain manufactured teeth, rated bearings, output
+coupling or quantified backlash. Lateral piano clearance is still unknown.
+
+The adapter-only native suite was verified on FreeCAD 0.19 in
+[GitHub Actions run 45054873747](https://github.com/isomorphisms/sun-gear-piano-tuner/actions/runs/45054873747);
+**drive-v2 native CI status must be checked separately** before claiming it passes.
