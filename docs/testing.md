@@ -42,7 +42,10 @@ There are eight native test cases, covering **both** square and star versions:
 
 The runner **deletes the previous result** before running. It errors if FreeCAD is
 missing, if a test failed or was skipped, or if no genuine result was written.
-Evidence is `build/freecad-test/result.json` and `unittest.log`.
+Evidence is `build/freecad-test/result.json` and `unittest.log`. After passing,
+the runner also exports both **genuine FreeCAD-generated** `.FCStd` editable
+models and STEP files into `build/freecad-test/models/`. Missing or empty
+exported models make the runner fail.
 
 Run the same tests using FreeCAD's GUI via `tests/freecad/run_gui.FCMacro`, or
 create the two native `.FCStd` models with `cad/generate_models.FCMacro`.
