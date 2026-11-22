@@ -6,7 +6,6 @@ A mechanical, fine-adjustment piano tuning tool. Initial work is the **tuning-pi
 
 - [`cad/sun_gear_adapter_v0.FCMacro`](cad/sun_gear_adapter_v0.FCMacro) creates an **editable Part Design model in FreeCAD** (Barrel pad, Pilot pad, tapered eight-point Subtractive Loft, and Z reference geometry). Run it from FreeCAD's Macro menu; it writes `~/sun_gear_adapter_v0.FCStd`.
 - [`cad/sun_gear_adapter_v0.step`](cad/sun_gear_adapter_v0.step) is a geometrically checked B-rep preview of the same **nominal** design. Import into FreeCAD for inspection. STEP is not a substitute for the native feature history.
-- [`cad/sun_gear_adapter_v0.stl`](cad/sun_gear_adapter_v0.stl) is an inspection-only tessellation. A printed part must **not** be used for high-torque piano tuning.
 - [`docs/adapter_design_notes.md`](docs/adapter_design_notes.md) contains dimensions, caveats, verification jobs, and next mechanical options.
 
 **Important:** this is an approximate **#2 star-style** tapered socket, *not* a commercially proven #2 socket dimension. The #2 label is not a standardized across-flats measurement, and tuning-pin shank diameters are not the head dimensions. Fit must be established against a real pin and an existing hardened #2 tip before torque is applied.
