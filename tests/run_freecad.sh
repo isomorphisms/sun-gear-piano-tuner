@@ -37,3 +37,7 @@ if (report.get('runtime') != 'REAL_FREECAD' or report.get('status') != 'PASS'
     sys.exit('FAIL: native FreeCAD tests incomplete or failed')
 PY
 if [[ "$status" -ne 0 ]]; then exit "$status"; fi
+for style in square star; do
+  [[ -s "$SUN_GEAR_TEST_DIR/models/sun_gear_adapter_${style}_v1.FCStd" ]] || { echo "FAIL: missing native $style FCStd" >&2; exit 1; }
+  [[ -s "$SUN_GEAR_TEST_DIR/models/sun_gear_adapter_${style}_v1.step" ]] || { echo "FAIL: missing native $style STEP" >&2; exit 1; }
+done
