@@ -1,0 +1,153 @@
+# Sun Gear Piano Tuner — FreeCAD first-pass mechanical interface
+# FreeCAD: Macro -> Macros -> Create/Load -> Execute
+# Creates an editable Part Design body: two pads + subtractive loft.
+# This is a fit-study prototype. It is NOT a production socket specification.
+import math
+import os
+import FreeCAD as App
+import Part
+import Sketcher
+
+# Parameters (millimeters; edit these and re-run to regenerate the model).
+BOX_DEPTH = 101.6                  # 4.000 in; axial depth only, XY unmeasured
+EXPOSED_PIN = 12.7                 # 0.500 in usable protrusion
+ENGAGEMENT_TARGET = 10.0          # first-pass effective engagement
+BARREL_DIAMETER = 15.0            # provisional; check nearby tuning pin clearance
+BARREL_LENGTH = 20.0
+PILOT_DIAMETER = 8.0               # provisional gear-neutral locating boss
+PILOT_LENGTH = 10.0
+STAR_MOUTH_ACROSS_FLATS = 7.05    # UNVERIFIED approximation; NOT a #2 standard
+STAR_CAVITY_DEPTH = 11.5          # blind socket, 1.5 mm tip-end clearance
+STAR_WALL_DRAFT_DEG = 4.0         # ~8 degree included taper, nominal
+
+# Place seated adapter above surface so the projected pin enters 10 mm.
+BOTTOM_Z = EXPOSED_PIN - ENGAGEMENT_TARGET
+STAR_ROOF_AF = STAR_MOUTH_ACROSS_FLATS - 2.0 * STAR_CAVITY_DEPTH * math.tan(math.radians(STAR_WALL_DRAFT_DEG))
+assert BOTTOM_Z >= 0 and STAR_ROOF_AF > 0
+assert ENGAGEMENT_TARGET < STAR_CAVITY_DEPTH <= BARREL_LENGTH
+assert BARREL_DIAMETER/2 > STAR_MOUTH_ACROSS_FLATS/math.sqrt(2)
+assert BOTTOM_Z + BARREL_LENGTH + PILOT_LENGTH <= BOX_DEPTH
+
+name = 'SunGearPianoTunerAdapter'
+if App.ActiveDocument and App.ActiveDocument.Name == name:
+    App.closeDocument(name)
+doc = App.newDocument(name)
+V = App.Vector
+
+# A native FreeCAD Part Design feature history instead of a frozen mesh.
+body = doc.addObject('PartDesign::Body', 'SocketAdapter')
+body.Label = 'Removable star-socket adapter — prototype'
+body.Placement.Base = V(0, 0, BOTTOM_Z)
+
+barrel_sk = body.newObject('Sketcher::SketchObject', 'BarrelProfile')
+barrel_sk.Label = 'Barrel Ø%.2f mm' % BARREL_DIAMETER
+barrel_sk.addGeometry(Part.Circle(V(0,0,0), V(0,0,1), BARREL_DIAMETER/2.0), False)
+barrel_sk.addConstraint(Sketcher.Constraint('Diameter', 0, BARREL_DIAMETER))
+doc.recompute()
+barrel = body.newObject('PartDesign::Pad', 'Barrel')
+barrel.Profile = barrel_sk
+barrel.Length = BARREL_LENGTH
+doc.recompute()
+
+pilot_sk = body.newObject('Sketcher::SketchObject', 'PilotProfile')
+pilot_sk.Label = 'Provisional pilot Ø%.2f mm' % PILOT_DIAMETER
+pilot_sk.Placement.Base = V(0,0,BARREL_LENGTH)
+pilot_sk.addGeometry(Part.Circle(V(0,0,0), V(0,0,1), PILOT_DIAMETER/2.0), False)
+pilot_sk.addConstraint(Sketcher.Constraint('Diameter', 0, PILOT_DIAMETER))
+doc.recompute()
+pilot = body.newObject('PartDesign::Pad', 'Pilot')
+pilot.Profile = pilot_sk
+pilot.Length = PILOT_LENGTH
+doc.recompute()
+
+# Eight-point socket = union outline of two square profiles rotated 45 degrees.
+# 16 alternating convex / concave corners, with ruled tapered walls.
+def star_points(across_flats):
+    half = across_flats / 2.0
+    outer_r = math.sqrt(2.0) * half
+    inner_r = math.sqrt(1.0 + (math.sqrt(2.0)-1.0)**2) * half
+    return [( (outer_r if i % 2 == 0 else inner_r) * math.cos(math.radians(i * 22.5)),
+              (outer_r if i % 2 == 0 else inner_r) * math.sin(math.radians(i * 22.5)) )
+            for i in range(16)]
+
+def add_star_sketch(sketch_name, sketch_label, across_flats, z):
+    sketch = body.newObject('Sketcher::SketchObject', sketch_name)
+    sketch.Label = sketch_label
+    sketch.Placement.Base = V(0,0,z)
+    points = star_points(across_flats)
+    for i in range(16):
+        a = points[i]
+        b = points[(i+1) % 16]
+        sketch.addGeometry(Part.LineSegment(V(a[0],a[1],0), V(b[0],b[1],0)), False)
+    # The sketches are deliberately regenerated from the constants above.
+    # Adjust the three socket parameters there, not individual vertices.
+    return sketch
+
+mouth_sk = add_star_sketch('StarMouth', '8-point star — mouth (unverified #2 approximation)', STAR_MOUTH_ACROSS_FLATS, 0)
+roof_sk = add_star_sketch('StarRoof', '8-point star — tapered blind end', STAR_ROOF_AF, STAR_CAVITY_DEPTH)
+doc.recompute()
+
+socket = body.newObject('PartDesign::SubtractiveLoft', 'TaperedStarSocket')
+socket.Label = 'Tapered 8-point blind socket'
+socket.Profile = mouth_sk
+socket.Sections = [roof_sk]
+socket.Ruled = True
+doc.recompute()
+body.Tip = socket
+if socket.Shape.isNull() or not socket.Shape.isValid() or len(socket.Shape.Solids) != 1:
+    raise RuntimeError('FreeCAD subtractive loft failed; verify sketches and loft in the document.')
+
+for obj in [barrel_sk, barrel, pilot_sk, pilot, mouth_sk, roof_sk]:
+    if App.GuiUp:
+        obj.ViewObject.Visibility = False
+if App.GuiUp:
+    socket.ViewObject.Visibility = True
+    body.ViewObject.Visibility = True
+
+# Explicit reference lines instead of inventing a width for the 4-inch box.
+references = doc.addObject('App::DocumentObjectGroup', 'ReferenceEnvelope')
+references.Label = 'REFERENCE ONLY — depth and exposed pin'
+for prop, val in [
+    ('BoxDepth', BOX_DEPTH), ('ExposedPinLength', EXPOSED_PIN),
+    ('EngagementTarget', ENGAGEMENT_TARGET), ('AdapterSeatedBottom', BOTTOM_Z),
+    ('RemainingDepthAboveAdapter', BOX_DEPTH - BOTTOM_Z - BARREL_LENGTH - PILOT_LENGTH),
+    ('StarMouthAcrossFlatsUnverified', STAR_MOUTH_ACROSS_FLATS),
+    ('StarRoofAcrossFlatsUnverified', STAR_ROOF_AF),
+]:
+    references.addProperty('App::PropertyLength', prop, 'Dimensions')
+    setattr(references, prop, val)
+references.addProperty('App::PropertyAngle', 'NominalWallDraft', 'Dimensions')
+references.NominalWallDraft = STAR_WALL_DRAFT_DEG
+references.addProperty('App::PropertyString', 'Gearing', 'Notes')
+references.Gearing = 'UNDECIDED; pilot is only an interface placeholder, not a torque coupling.'
+references.addProperty('App::PropertyString', 'FitStatus', 'Notes')
+references.FitStatus = 'NOT VERIFIED: commercial #2 star tips vary; inspect pin and measure real tip.'
+references.addProperty('App::PropertyString', 'EnvelopeXY', 'Notes')
+references.EnvelopeXY = 'NOT SPECIFIED. Reference lines represent Z only; no enclosure width is inferred.'
+
+def add_guide(name, label, x, height, color):
+    guide = doc.addObject('Part::Feature', name)
+    guide.Label = label
+    guide.Shape = Part.makeLine(V(x, 0, 0), V(x, 0, height))
+    references.addObject(guide)
+    if App.GuiUp:
+        guide.ViewObject.LineColor = color
+        guide.ViewObject.LineWidth = 3
+    return guide
+
+add_guide('FullDepth', '4.000 in / 101.6 mm maximum axial depth', 19, BOX_DEPTH, (0.3,0.7,1.0))
+add_guide('ExposedPin', '0.500 in / 12.7 mm exposed tuning pin', 15, EXPOSED_PIN, (0.9,0.5,0.2))
+
+doc.recompute()
+if App.GuiUp:
+    socket.ViewObject.ShapeColor = (0.73,0.78,0.84)
+    try:
+        App.Gui.activeDocument().activeView().viewAxonometric()
+        App.Gui.activeDocument().activeView().fitAll()
+    except Exception:
+        pass
+
+out = os.path.join(os.path.expanduser('~'), 'sun_gear_adapter_v0.FCStd')
+doc.saveAs(out)
+App.Console.PrintMessage('Created native FreeCAD model: %s\n' % out)
+App.Console.PrintMessage('Fit unverified; do not apply tuning torque using a printed prototype.\n')
