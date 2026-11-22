@@ -38,7 +38,9 @@ bash tests/run_freecad.sh
 
 That command **requires a real FreeCAD runtime** and fails if it cannot find one.
 It checks both Part Design trees, validity, socket openings, blind roofs, axial
-envelope, recompute, `.FCStd` reopen and STEP round-trip. See
+envelope, recompute, `.FCStd` reopen and STEP round-trip. A passing runner
+exports **actual FreeCAD `.FCStd` and STEP files** for both variants to
+`build/freecad-test/models/`; CI retains them as downloadable artifacts. See
 [`docs/testing.md`](docs/testing.md) and the
 [CI workflow](.github/workflows/freecad-native.yml).
 
