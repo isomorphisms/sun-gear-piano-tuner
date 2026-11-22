@@ -1,0 +1,17 @@
+# Run in FreeCAD: Macro menu -> open this file -> Execute.
+# Produces both native, editable .FCStd projects and both STEP exports.
+import os
+import FreeCAD as App
+import sys
+from pathlib import Path
+
+root = Path(os.environ.get('SUN_GEAR_ROOT', str(Path(__file__).resolve().parent.parent)))
+if str(root) not in sys.path:
+    sys.path.insert(0, str(root))
+from cad.freecad_adapter import export_adapter
+
+output = root / 'build' / 'freecad'
+for style in ('square', 'star'):
+    native, step = export_adapter(style, output)
+    App.Console.PrintMessage('Produced %s and %s\n' % (native, step))
+App.Console.PrintMessage('PROTOTYPES ONLY: socket fit, torque capacity, and gear coupling unverified.\n')
